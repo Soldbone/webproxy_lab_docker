@@ -97,4 +97,52 @@ void doit(int fd)
     serve_dynamic(fd, filename, cgiargs); /* 실행 파일을 실행시키고 그 출력 결과를 클라이언트에게 전송한다. dup2를 통해 표준 출력을 소켓으로 연결한다. dup2는 특정 fd에 현재 fd 내용을 복제할 수 있도록 한다. */
 }
 
+void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg)
+{
+    // char buf[MAXLINE], body[MAXBUF];
 
+    // /* Build the HTTP response body */
+    // sprintf(body, "<html><title>Tiny Error</title>");
+    // sprintf(body, "%s<body bgcolor=""ffffff"">\r\n", body);
+    // sprintf(body, "%s%s: %s\r\n", body, longmsg, cause);
+    // sprintf(body, "%s<p>%s: %s\r\n", body, longmsg, cause);
+    // sprintf(body, "%s<hr><em>The Tiny Web server</em>\r\n", body);
+
+    // /* Print the HTTP response */
+    // sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
+    // Rio_writen(fd, buf, strlen(buf));
+    // sprintf(buf, "Content-type: text/html\r\n");
+    // Rio_writen(fd, buf, strlen(buf));
+    // sprintf(buf, "Content-length: %d\r\n\r\n", (int)strlen(body));
+    // Rio_writen(fd, buf, strlen(buf));
+    // Rio_writen(fd, body, strlen(body));
+
+    /* 새로운 버전 */
+    char buf[MAXLINE];
+    char body[MAXBUF];
+    int len = 0; // body 버퍼에 채워진 문자열의 길이를 추적할 변수
+
+    /* 1. Build the HTTP response body safely */
+    // snprintf는 작성된 문자열의 길이를 반환. 이를 len에 누적
+    // body + len: 기존 문자열이 끝난 지점부터 새로 작성
+    // MAXBUF - len: 버퍼에 남은 여유 공간만큼만 안전하게 작성
+
+    len += snprintf(body + len, MAXBUF - len, "<html><title>Tiny Error</title>");
+    len += snprintf(body + len, MAXBUF - len, "<body bgcolor=\"ffffff\">\r\n");
+    len += snprintf(body + len, MAXBUF - len, "%s: %s\r\n", longmsg, cause);
+    len += snprintf(body + len, MAXBUF - len, "<p>%s: %s\r\n", longmsg, cause);
+    len += snprintf(body + len, MAXBUF - len, "<hr><em>The Tiny Web server</em>\r\n");
+
+    /* 2. Print the HTTP response headers */
+    snprintf(buf, MAXLINE, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
+    Rio_writen(fd, buf, strlen(buf)); /* snprintf는 버퍼를 직접 이동시켜야 하지만 Rio_writen은 내부적으로 버퍼를 이동시켜 준다. */
+
+    snprintf(buf, MAXLINE, "Content-type: text/html\r\n");
+    Rio_writen(fd, buf, strlen(buf));
+
+    snprintf(buf, MAXLINE, "Content-length: %d\r\n\r\n", len);
+    Rio_writen(fd, buf, strlen(buf));
+
+    /* 3. Print the HTTP response body */
+    Rio_writen(fd, body, len);
+}
